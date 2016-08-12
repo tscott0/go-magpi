@@ -4,11 +4,12 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"regexp"
+	"strings"
 )
 
 func main() {
@@ -45,29 +46,31 @@ func check(srcPtr *string) {
 
 		reader := bufio.NewReader(response.Body)
 
-		re := regexp.MustCompile(`.*<tr.*href="([^"]*\.pdf)".*tr>.*`)
-
 		for {
 			lineBytes, err := reader.ReadBytes('\n')
 			if err != nil {
 				log.Fatal(err)
 			}
-			//fmt.Println(re.FindAllString(string(lineBytes), -1))
-			fmt.Println(re.FindAllStringSubmatch(string(lineBytes), -1))
+			processLine(string(lineBytes))
 		}
+	}
+}
 
+func processLine(line string) {
+	re := regexp.MustCompile(`.*<tr.*href="([^"]*\.pdf)".*tr>.*`)
+	allMatches := re.FindAllStringSubmatch(line, -1)
+	if len(allMatches) > 0 {
+		fmt.Println(allMatches[0])
 	}
 }
 
 func debug(srcPtr *string) {
-	response, err := http.Get(*srcPtr)
+	fileBytes, err := ioutil.ReadFile("issues")
 	if err != nil {
 		log.Fatal(err)
-	} else {
-		defer response.Body.Close()
-		_, err := io.Copy(os.Stdout, response.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
+	}
+	allLines := strings.Split(string(fileBytes), "\n")
+	for _, line := range allLines {
+		processLine(line)
 	}
 }
